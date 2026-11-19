@@ -88,6 +88,8 @@ public class GuiCfSettings extends GuiScreen {
         File logDir = new File(CfTunnelMod.logDir(), "cftunnel");
         drawString(fontRendererObj, Lang.f("settings.logs", logDir.getAbsolutePath()),
                 left, height - 60, 0x777777);
+        drawString(fontRendererObj, "Cloudflared Tunnel Connect v" + CfTunnelMod.VERSION,
+                6, 6, 0x808080);
 
         pathField.drawTextBox();
         versionField.drawTextBox();
