@@ -57,12 +57,16 @@ jobs:
             !build/libs/*-dev.jar
           if-no-files-found: error
 
+      - name: Resolve release jar
+        id: release_jar
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: echo "path=build/libs/cftunnel-${GITHUB_REF_NAME#v}.jar" >> "$GITHUB_OUTPUT"
+
       - name: Create release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
           name: ${{ github.ref_name }}
           generate_release_notes: true
-          files: |
-            build/libs/*.jar
-            !build/libs/*-dev.jar
+          files: ${{ steps.release_jar.outputs.path }}
