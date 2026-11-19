@@ -17,7 +17,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
- * cloudflared 実行ファイルの解決・自動ダウンロード・検証。
+ * Resolves, downloads and validates the cloudflared executable.
  */
 public final class CloudflaredBinary {
 
@@ -31,15 +31,12 @@ public final class CloudflaredBinary {
     private CloudflaredBinary() {
     }
 
-    /**
-     * プロファイル設定または自動ダウンロードで cloudflared を用意する。
-     */
-    public static File resolve(TunnelProfile profile, Progress progress) throws Exception {
-        String explicit = profile.cloudflaredPathOrEmpty();
-        if (!explicit.isEmpty()) {
-            File configured = new File(explicit);
+    public static File resolve(String explicitPath, Progress progress) throws Exception {
+        String configuredPath = explicitPath == null ? "" : explicitPath.trim();
+        if (!configuredPath.isEmpty()) {
+            File configured = new File(configuredPath);
             if (!configured.isFile()) {
-                throw new TunnelException(Lang.f("error.pathMissing", explicit));
+                throw new TunnelException(Lang.f("error.pathMissing", configuredPath));
             }
             return configured;
         }
@@ -65,7 +62,7 @@ public final class CloudflaredBinary {
     }
 
     /**
-     * cloudflared access login を実行する（ブラウザが開く）。
+     * Runs "cloudflared access login", which opens the browser.
      */
     public static int login(File cloudflared, String hostname, File logFile) throws Exception {
         String url = hostname;
@@ -84,10 +81,6 @@ public final class CloudflaredBinary {
         return process.exitValue();
     }
 
-    // ------------------------------------------------------------------
-    // ダウンロード
-    // ------------------------------------------------------------------
-
     private static void download(File target, Progress progress) throws Exception {
         File dir = target.getParentFile();
         if (!dir.isDirectory() && !dir.mkdirs()) {
@@ -96,7 +89,7 @@ public final class CloudflaredBinary {
 
         String asset = assetName();
         String url = RELEASE_BASE + Config.cloudflaredVersion() + "/" + asset;
-        CfTunnelMod.LOG.info("cloudflared をダウンロードします: {}", url);
+        CfTunnelMod.LOG.info("Downloading cloudflared: {}", url);
 
         File archive = target;
         boolean macArchive = asset.endsWith(".tgz");
@@ -114,7 +107,7 @@ public final class CloudflaredBinary {
             connection.setRequestProperty("User-Agent", "cftunnel/" + CfTunnelMod.VERSION);
             int code = connection.getResponseCode();
             if (code != HttpURLConnection.HTTP_OK) {
-                throw new TunnelException(Lang.f("error.downloadHttp", code, url));
+                throw new TunnelException(Lang.f("error.downloadHttp", Integer.valueOf(code), url));
             }
             long total = connection.getContentLengthLong();
             if (progress != null) {
@@ -136,10 +129,9 @@ public final class CloudflaredBinary {
                 }
             }
             if (read < 1024 * 1024) {
-                throw new TunnelException(Lang.f("error.downloadTooSmall", read));
+                throw new TunnelException(Lang.f("error.downloadTooSmall", Long.valueOf(read)));
             }
-            Files.move(tmp.toPath(), archive.toPath(),
-                    StandardCopyOption.REPLACE_EXISTING);
+            Files.move(tmp.toPath(), archive.toPath(), StandardCopyOption.REPLACE_EXISTING);
         } finally {
             Files2.deleteQuietly(tmp);
             if (connection != null) {
@@ -152,7 +144,7 @@ public final class CloudflaredBinary {
             Files2.deleteQuietly(archive);
         }
         if (target.setExecutable(true)) {
-            CfTunnelMod.LOG.debug("実行権限を付与しました: {}", target.getAbsolutePath());
+            CfTunnelMod.LOG.debug("Marked cloudflared as executable: {}", target.getAbsolutePath());
         }
         if (progress != null) {
             progress.report(Lang.t("status.verifying"), 1.0);
@@ -163,15 +155,14 @@ public final class CloudflaredBinary {
         ProcessBuilder pb = new ProcessBuilder(
                 "tar", "-xzf", archive.getAbsolutePath(), "-C", dir.getAbsolutePath());
         pb.redirectErrorStream(true);
-        pb.redirectOutput(ProcessBuilder.Redirect.appendTo(
-                new File(dir, "extract.log")));
+        pb.redirectOutput(ProcessBuilder.Redirect.appendTo(new File(dir, "extract.log")));
         Process process = pb.start();
         if (!process.waitFor(120, TimeUnit.SECONDS)) {
             process.destroyForcibly();
             throw new TunnelException(Lang.t("error.extractTimeout"));
         }
         if (process.exitValue() != 0) {
-            throw new TunnelException(Lang.f("error.extractFailed", process.exitValue()));
+            throw new TunnelException(Lang.f("error.extractFailed", Integer.valueOf(process.exitValue())));
         }
     }
 
@@ -200,10 +191,6 @@ public final class CloudflaredBinary {
         throw new TunnelException(Lang.f("error.unsupportedPlatform", os, arch));
     }
 
-    // ------------------------------------------------------------------
-    // 検証
-    // ------------------------------------------------------------------
-
     private static boolean isVerified(File file) {
         synchronized (VERIFIED) {
             Long cached = VERIFIED.get(file.getAbsolutePath());
@@ -216,7 +203,7 @@ public final class CloudflaredBinary {
             return false;
         }
         if (!hasValidMagic(file)) {
-            CfTunnelMod.LOG.warn("実行ファイルの形式が想定と違います: {}", file.getAbsolutePath());
+            CfTunnelMod.LOG.warn("Unexpected executable format: {}", file.getAbsolutePath());
             return false;
         }
         file.setExecutable(true);
@@ -243,7 +230,7 @@ public final class CloudflaredBinary {
             }
             return true;
         } catch (Exception e) {
-            CfTunnelMod.LOG.warn("cloudflared の実行確認に失敗しました: {}", file.getAbsolutePath(), e);
+            CfTunnelMod.LOG.warn("Failed to run cloudflared --version: {}", file.getAbsolutePath(), e);
             return false;
         }
     }
@@ -251,8 +238,7 @@ public final class CloudflaredBinary {
     private static boolean hasValidMagic(File file) {
         byte[] head = new byte[4];
         try (InputStream in = new java.io.FileInputStream(file)) {
-            int read = in.read(head);
-            if (read < 4) {
+            if (in.read(head) < 4) {
                 return false;
             }
         } catch (IOException e) {
@@ -261,11 +247,9 @@ public final class CloudflaredBinary {
         if (isWindows()) {
             return head[0] == 'M' && head[1] == 'Z';
         }
-        // ELF
         if (head[0] == 0x7f && head[1] == 'E' && head[2] == 'L' && head[3] == 'F') {
             return true;
         }
-        // Mach-O (32/64bit, little/big endian)
         int magic = ((head[0] & 0xff) << 24) | ((head[1] & 0xff) << 16)
                 | ((head[2] & 0xff) << 8) | (head[3] & 0xff);
         return magic == 0xfeedface || magic == 0xfeedfacf

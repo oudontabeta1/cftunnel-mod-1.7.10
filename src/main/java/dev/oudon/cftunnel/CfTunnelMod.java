@@ -14,7 +14,7 @@ public class CfTunnelMod {
 
     public static final String MODID = "cftunnel";
     public static final String NAME = "Cloudflared Tunnel Connect";
-    public static final String VERSION = "1.0.2";
+    public static final String VERSION = "1.1.0";
     public static final Logger LOG = LogManager.getLogger(MODID);
 
     @SidedProxy(clientSide = "dev.oudon.cftunnel.client.ClientProxy",
@@ -31,7 +31,7 @@ public class CfTunnelMod {
             logDir = new File(configDir.getParentFile(), "../logs");
         }
         Config.load(configDir);
-        ProfileStore.get().load(configDir);
+        ServerConfigStore.get().load(configDir);
         proxy.preInit(event);
     }
 

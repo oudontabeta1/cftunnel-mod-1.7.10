@@ -1,37 +1,36 @@
-key.cftunnel.open=Open tunnel list
+key.cftunnel.open=Open Cloudflare settings
 key.categories.cftunnel=Cloudflare Tunnel
 
-cftunnel.button.tunnels=Tunnels
-cftunnel.button.connect=Connect
-cftunnel.button.add=Add
-cftunnel.button.edit=Edit
-cftunnel.button.delete=Delete
-cftunnel.button.deleteConfirm=Confirm
-cftunnel.button.login=Login
-cftunnel.button.done=Done
+cftunnel.button.settings=CF Settings
+cftunnel.button.serverCf=Cloudflare...
 cftunnel.button.save=Save
 cftunnel.button.cancel=Cancel
+cftunnel.button.login=Login
 cftunnel.button.copy=Copy
 cftunnel.button.close=Close
 
-cftunnel.gui.title=Cloudflare Tunnel
-cftunnel.gui.subtitle=Connect to servers published through a Cloudflare Tunnel
-cftunnel.gui.empty=No tunnels yet. Press Add to create one.
+cftunnel.server.title=Cloudflare Tunnel for this server
+cftunnel.server.hostname=Hostname
+cftunnel.server.hostnameHint=Public hostname of the tunnel (no scheme or port)
+cftunnel.server.port=Local port
+cftunnel.server.portHint=(empty = auto)
+cftunnel.server.toggleOn=Cloudflare Tunnel: ON
+cftunnel.server.toggleOff=Cloudflare Tunnel: OFF
+cftunnel.server.statusOn=Cloudflare: %s%s
+cftunnel.server.statusOff=Cloudflare: off
 
-cftunnel.list.busy=Connecting...
-cftunnel.list.connected=Connected
-cftunnel.list.more=+%s more (scroll)
-cftunnel.list.deleted=Deleted
-
-cftunnel.edit.title=Edit Tunnel
-cftunnel.edit.titleNew=New Tunnel
-cftunnel.edit.name=Display name
-cftunnel.edit.hostname=Hostname
-cftunnel.edit.hostnameHint=Example: mc.example.com (no scheme or port)
-cftunnel.edit.port=Local port
-cftunnel.edit.portHint=(empty = auto)
-cftunnel.edit.path=cloudflared path
-cftunnel.edit.pathHint=Leave empty to download cloudflared automatically
+cftunnel.settings.title=Cloudflare Tunnel Settings
+cftunnel.settings.path=cloudflared path
+cftunnel.settings.pathHint=Leave empty to download cloudflared automatically
+cftunnel.settings.version=Release version
+cftunnel.settings.versionHint=(GitHub tag)
+cftunnel.settings.timeout=Ready timeout
+cftunnel.settings.timeoutHint=(5-300 sec)
+cftunnel.settings.extraArgs=Extra arguments
+cftunnel.settings.extraArgsHint=Optional arguments passed to cloudflared (space separated)
+cftunnel.settings.logs=Logs: %s
+cftunnel.settings.errorVersion=Enter a cloudflared release version
+cftunnel.settings.errorTimeout=Timeout must be between 5 and 300 seconds
 
 cftunnel.status.preparing=Preparing cloudflared...
 cftunnel.status.downloading=Downloading cloudflared...
@@ -47,6 +46,7 @@ cftunnel.status.loginFailed=Login failed (exit %s). See %s
 
 cftunnel.progress.title=Establishing tunnel
 cftunnel.progress.hint=This can take a while on the first run
+
 cftunnel.error.title=Connection failed
 cftunnel.error.logTail=cloudflared output:
 cftunnel.error.logPath=Log: %s

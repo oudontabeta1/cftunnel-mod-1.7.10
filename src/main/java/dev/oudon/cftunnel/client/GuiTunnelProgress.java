@@ -2,22 +2,21 @@ package dev.oudon.cftunnel.client;
 
 import dev.oudon.cftunnel.Lang;
 import dev.oudon.cftunnel.TunnelManager;
-import dev.oudon.cftunnel.TunnelProfile;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiScreen;
 
 /**
- * トンネル確立中の進捗表示。
+ * Progress screen shown while the tunnel is being established.
  */
 public class GuiTunnelProgress extends GuiScreen {
 
     private final GuiScreen parent;
-    private final TunnelProfile profile;
+    private final String displayName;
 
-    public GuiTunnelProgress(GuiScreen parent, TunnelProfile profile) {
+    public GuiTunnelProgress(GuiScreen parent, String displayName) {
         this.parent = parent;
-        this.profile = profile;
+        this.displayName = displayName == null ? "" : displayName;
     }
 
     @Override
@@ -34,9 +33,8 @@ public class GuiTunnelProgress extends GuiScreen {
 
         drawCenteredString(fontRendererObj, Lang.t("progress.title"), width / 2,
                 height / 2 - 70, 0xFFFFFF);
-        drawCenteredString(fontRendererObj,
-                trim(profile != null ? profile.displayName() : "", 320),
-                width / 2, height / 2 - 52, 0xA0A0A0);
+        drawCenteredString(fontRendererObj, trim(displayName, 320), width / 2,
+                height / 2 - 52, 0xA0A0A0);
         drawCenteredString(fontRendererObj, trim(manager.statusText(), 400), width / 2,
                 height / 2 - 20, 0xFFFFFF);
 

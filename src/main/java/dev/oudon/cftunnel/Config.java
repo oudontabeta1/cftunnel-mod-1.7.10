@@ -15,34 +15,36 @@ import java.io.Writer;
 import java.nio.charset.Charset;
 
 /**
- * MOD 全体の設定。config/cftunnel/config.json に保存する。
+ * Global settings, stored in config/cftunnel/config.json.
  */
 public final class Config {
 
     public static final Charset UTF8 = Charset.forName("UTF-8");
     public static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
-    private static final Data DATA_DEFAULT = new Data();
-    private static Data data = DATA_DEFAULT;
+    private static final Data DEFAULTS = new Data();
+    private static Data data = DEFAULTS;
     private static File file;
 
     private Config() {
     }
 
     public static final class Data {
-        /** cloudflared の起動待ちタイムアウト（秒）。 */
+        /** Seconds to wait for cloudflared to accept connections. */
         public int readyTimeoutSeconds = 25;
-        /** 自動ダウンロードする cloudflared のバージョン（GitHub のタグ）。 */
+        /** cloudflared release tag to download. */
         public String cloudflaredVersion = "2026.11.1";
-        /** cloudflared に追加で渡す引数（空白区切り）。 */
+        /** Extra arguments passed to cloudflared. */
         public String extraArgs = "";
-        /** 接続失敗時に GUI に表示するログ行数。 */
+        /** Number of log lines shown on failure. */
         public int logTailLines = 12;
+        /** Explicit cloudflared path. Empty means auto-download. */
+        public String cloudflaredPath = "";
     }
 
     public static void load(File configDir) {
         if (!configDir.isDirectory() && !configDir.mkdirs()) {
-            CfTunnelMod.LOG.warn("設定ディレクトリを作成できませんでした: {}", configDir);
+            CfTunnelMod.LOG.warn("Could not create config directory: {}", configDir);
         }
         file = new File(configDir, "config.json");
         if (!file.isFile()) {
@@ -54,7 +56,7 @@ public final class Config {
             Data loaded = GSON.fromJson(r, Data.class);
             data = loaded != null ? loaded : new Data();
         } catch (IOException | JsonSyntaxException e) {
-            CfTunnelMod.LOG.warn("config.json の読み込みに失敗したため既定値を使います", e);
+            CfTunnelMod.LOG.warn("Failed to read config.json, using defaults", e);
             data = new Data();
         }
         normalize();
@@ -62,16 +64,19 @@ public final class Config {
 
     private static void normalize() {
         if (data.readyTimeoutSeconds < 5 || data.readyTimeoutSeconds > 300) {
-            data.readyTimeoutSeconds = DATA_DEFAULT.readyTimeoutSeconds;
+            data.readyTimeoutSeconds = DEFAULTS.readyTimeoutSeconds;
         }
         if (data.cloudflaredVersion == null || data.cloudflaredVersion.trim().isEmpty()) {
-            data.cloudflaredVersion = DATA_DEFAULT.cloudflaredVersion;
+            data.cloudflaredVersion = DEFAULTS.cloudflaredVersion;
         }
         if (data.extraArgs == null) {
             data.extraArgs = "";
         }
         if (data.logTailLines < 1 || data.logTailLines > 100) {
-            data.logTailLines = DATA_DEFAULT.logTailLines;
+            data.logTailLines = DEFAULTS.logTailLines;
+        }
+        if (data.cloudflaredPath == null) {
+            data.cloudflaredPath = "";
         }
     }
 
@@ -82,7 +87,7 @@ public final class Config {
         try (Writer w = new OutputStreamWriter(new FileOutputStream(file), UTF8)) {
             GSON.toJson(data, w);
         } catch (IOException e) {
-            CfTunnelMod.LOG.warn("config.json の保存に失敗しました", e);
+            CfTunnelMod.LOG.warn("Failed to write config.json", e);
         }
     }
 
@@ -100,5 +105,22 @@ public final class Config {
 
     public static int logTailLines() {
         return data.logTailLines;
+    }
+
+    public static String cloudflaredPath() {
+        return data.cloudflaredPath;
+    }
+
+    public static void update(int timeoutSeconds, String version, String extraArgs, String cloudflaredPath) {
+        data.readyTimeoutSeconds = timeoutSeconds;
+        data.cloudflaredVersion = version;
+        data.extraArgs = extraArgs;
+        data.cloudflaredPath = cloudflaredPath;
+        normalize();
+        save();
+    }
+
+    public static File configDir() {
+        return file == null ? null : file.getParentFile();
     }
 }

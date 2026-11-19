@@ -4,11 +4,12 @@ import cpw.mods.fml.client.registry.ClientRegistry;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.InputEvent;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.settings.KeyBinding;
 import org.lwjgl.input.Keyboard;
 
 /**
- * ボタンが他 MOD と重なった場合の逃げ道としてキーバインドも用意する。
+ * Fallback key binding for opening the global Cloudflare settings.
  */
 public class KeyHandler {
 
@@ -28,14 +29,10 @@ public class KeyHandler {
             return;
         }
         Minecraft mc = Minecraft.getMinecraft();
-        if (mc == null) {
+        if (mc == null || mc.currentScreen instanceof GuiCfSettings) {
             return;
         }
-        if (mc.currentScreen instanceof GuiTunnelList || mc.currentScreen instanceof GuiTunnelEdit
-                || mc.currentScreen instanceof GuiTunnelProgress
-                || mc.currentScreen instanceof GuiTunnelError) {
-            return;
-        }
-        mc.displayGuiScreen(new GuiTunnelList(mc.currentScreen));
+        GuiScreen parent = mc.currentScreen;
+        mc.displayGuiScreen(new GuiCfSettings(parent));
     }
 }

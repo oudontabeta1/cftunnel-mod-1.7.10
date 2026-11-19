@@ -19,7 +19,7 @@ import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
 /**
- * cloudflared access tcp の子プロセスを管理する。
+ * Manages the "cloudflared access tcp" child process.
  */
 public final class TunnelProcess {
 
@@ -31,9 +31,9 @@ public final class TunnelProcess {
     private File logFile;
     private int port = -1;
 
-    public void start(File cloudflared, TunnelProfile profile, int localPort) throws Exception {
+    public void start(File cloudflared, String hostname, int localPort) throws Exception {
         this.port = localPort;
-        this.logFile = newLogFile(profile);
+        this.logFile = newLogFile(hostname);
 
         List<String> command = new ArrayList<String>();
         command.add(cloudflared.getAbsolutePath());
@@ -41,11 +41,11 @@ public final class TunnelProcess {
         command.add("access");
         command.add("tcp");
         command.add("--hostname");
-        command.add(profile.hostnameOrEmpty());
+        command.add(hostname);
         command.add("--url");
         command.add("127.0.0.1:" + localPort);
 
-        CfTunnelMod.LOG.info("cloudflared を起動します: {}", join(command));
+        CfTunnelMod.LOG.info("Starting cloudflared: {}", join(command));
 
         ProcessBuilder pb = new ProcessBuilder(command);
         pb.redirectErrorStream(true);
@@ -76,13 +76,13 @@ public final class TunnelProcess {
                         }
                     }
                 } catch (Exception e) {
-                    CfTunnelMod.LOG.debug("cloudflared のログ読み取りを終了しました", e);
+                    CfTunnelMod.LOG.debug("Stopped reading cloudflared output", e);
                 } finally {
                     if (writer != null) {
                         try {
                             writer.close();
                         } catch (Exception ignored) {
-                            // 終了時のクローズ失敗は無視
+                            // closing on shutdown can fail; ignore
                         }
                     }
                 }
@@ -93,7 +93,7 @@ public final class TunnelProcess {
     }
 
     /**
-     * cloudflared がローカルポートを listen するまで待機する。
+     * Waits until cloudflared listens on the local port.
      */
     public void waitUntilReady(int timeoutSeconds) throws Exception {
         long deadline = System.currentTimeMillis() + timeoutSeconds * 1000L;
@@ -103,7 +103,7 @@ public final class TunnelProcess {
             }
             if (!process.isAlive()) {
                 throw new TunnelException(Lang.f("error.processExited",
-                        process.exitValue(), tailText(Config.logTailLines())));
+                        Integer.valueOf(process.exitValue()), tailText(Config.logTailLines())));
             }
             if (canConnect(port)) {
                 return;
@@ -126,7 +126,7 @@ public final class TunnelProcess {
             try {
                 socket.close();
             } catch (Exception ignored) {
-                // 無視
+                // ignore
             }
         }
     }
@@ -178,17 +178,17 @@ public final class TunnelProcess {
                 p.waitFor(2, TimeUnit.SECONDS);
             }
         } catch (Exception e) {
-            CfTunnelMod.LOG.debug("cloudflared の停止中に例外が発生しました", e);
+            CfTunnelMod.LOG.debug("Exception while stopping cloudflared", e);
         }
     }
 
-    private static File newLogFile(TunnelProfile profile) {
+    private static File newLogFile(String hostname) {
         File dir = new File(CfTunnelMod.logDir(), "cftunnel");
         if (!dir.isDirectory() && !dir.mkdirs()) {
-            CfTunnelMod.LOG.warn("ログディレクトリを作成できませんでした: {}", dir.getAbsolutePath());
+            CfTunnelMod.LOG.warn("Could not create log directory: {}", dir.getAbsolutePath());
         }
         String stamp = new SimpleDateFormat("yyyyMMdd-HHmmss", Locale.ROOT).format(new Date());
-        String host = profile.hostnameOrEmpty().replaceAll("[^A-Za-z0-9.-]", "_");
+        String host = hostname == null ? "" : hostname.replaceAll("[^A-Za-z0-9.-]", "_");
         return new File(dir, stamp + "-" + (host.isEmpty() ? "tunnel" : host) + ".log");
     }
 

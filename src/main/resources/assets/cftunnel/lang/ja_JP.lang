@@ -1,43 +1,42 @@
-key.cftunnel.open=トンネル一覧を開く
+key.cftunnel.open=Cloudflare設定を開く
 key.categories.cftunnel=Cloudflare Tunnel
 
-cftunnel.button.tunnels=トンネル
-cftunnel.button.connect=接続
-cftunnel.button.add=追加
-cftunnel.button.edit=編集
-cftunnel.button.delete=削除
-cftunnel.button.deleteConfirm=本当に削除?
-cftunnel.button.login=ログイン
-cftunnel.button.done=閉じる
+cftunnel.button.settings=CF設定
+cftunnel.button.serverCf=Cloudflare...
 cftunnel.button.save=保存
 cftunnel.button.cancel=キャンセル
+cftunnel.button.login=ログイン
 cftunnel.button.copy=コピー
 cftunnel.button.close=閉じる
 
-cftunnel.gui.title=Cloudflare Tunnel
-cftunnel.gui.subtitle=Cloudflare Tunnel 経由で公開されたサーバーに接続します
-cftunnel.gui.empty=トンネルがありません。「追加」から作成してください。
+cftunnel.server.title=このサーバーの Cloudflare Tunnel
+cftunnel.server.hostname=ホスト名
+cftunnel.server.hostnameHint=トンネルの公開ホスト名（スキームやポートは不要）
+cftunnel.server.port=ローカルポート
+cftunnel.server.portHint=（空 = 自動）
+cftunnel.server.toggleOn=Cloudflare Tunnel: ON
+cftunnel.server.toggleOff=Cloudflare Tunnel: OFF
+cftunnel.server.statusOn=Cloudflare: %s%s
+cftunnel.server.statusOff=Cloudflare: off
 
-cftunnel.list.busy=接続中...
-cftunnel.list.connected=接続中
-cftunnel.list.more=さらに %s 件（スクロール）
-cftunnel.list.deleted=削除しました
-
-cftunnel.edit.title=トンネル設定
-cftunnel.edit.titleNew=トンネルを追加
-cftunnel.edit.name=表示名
-cftunnel.edit.hostname=ホスト名
-cftunnel.edit.hostnameHint=例: mc.example.com（スキームやポートは不要）
-cftunnel.edit.port=ローカルポート
-cftunnel.edit.portHint=（空 = 自動）
-cftunnel.edit.path=cloudflared のパス
-cftunnel.edit.pathHint=空の場合は自動でダウンロードします
+cftunnel.settings.title=Cloudflare Tunnel 設定
+cftunnel.settings.path=cloudflared のパス
+cftunnel.settings.pathHint=空の場合は自動でダウンロードします
+cftunnel.settings.version=リリースバージョン
+cftunnel.settings.versionHint=(GitHub のタグ)
+cftunnel.settings.timeout=接続待ち時間
+cftunnel.settings.timeoutHint=(5〜300 秒)
+cftunnel.settings.extraArgs=追加引数
+cftunnel.settings.extraArgsHint=cloudflared に渡す任意の引数（空白区切り）
+cftunnel.settings.logs=ログ: %s
+cftunnel.settings.errorVersion=cloudflared のリリースバージョンを入力してください
+cftunnel.settings.errorTimeout=接続待ち時間は 5〜300 秒で指定してください
 
 cftunnel.status.preparing=cloudflared を準備しています...
 cftunnel.status.downloading=cloudflared をダウンロードしています...
 cftunnel.status.verifying=cloudflared を検証しています...
 cftunnel.status.startingProcess=トンネルを起動しています...
-cftunnel.status.waitingReady=トンネンの確立を待っています...
+cftunnel.status.waitingReady=トンネルの確立を待っています...
 cftunnel.status.handoff=サーバーに接続しています...
 cftunnel.status.loginPreparing=ログインを準備しています...
 cftunnel.status.loginBrowser=ブラウザでログインを完了してください
@@ -47,6 +46,7 @@ cftunnel.status.loginFailed=ログインに失敗しました（終了コード 
 
 cftunnel.progress.title=トンネルを確立しています
 cftunnel.progress.hint=初回は少し時間がかかります
+
 cftunnel.error.title=接続に失敗しました
 cftunnel.error.logTail=cloudflared の出力:
 cftunnel.error.logPath=ログ: %s

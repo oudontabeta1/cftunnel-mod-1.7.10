@@ -1,5 +1,6 @@
 package dev.oudon.cftunnel;
 
+import cpw.mods.fml.client.FMLClientHandler;
 import dev.oudon.cftunnel.client.GuiTunnelError;
 import dev.oudon.cftunnel.util.Files2;
 import dev.oudon.cftunnel.util.Ports;
@@ -7,7 +8,6 @@ import dev.oudon.cftunnel.util.Ports;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiDisconnected;
 import net.minecraft.client.gui.GuiScreen;
-import net.minecraft.client.multiplayer.GuiConnecting;
 import net.minecraft.client.multiplayer.ServerData;
 
 import java.io.File;
@@ -15,7 +15,7 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
- * トンネルのライフサイクル（起動・接続・後始末）を一元管理する。
+ * Owns the tunnel lifecycle: start, hand off to Minecraft, clean up.
  */
 public final class TunnelManager {
 
@@ -23,7 +23,7 @@ public final class TunnelManager {
         IDLE, STARTING, READY, CONNECTED, FAILED
     }
 
-    /** 接続試行が失敗したまま放置された場合の上限（ミリ秒）。 */
+    /** Abort the handoff if the client never joins. */
     private static final long HANDOFF_TIMEOUT_MS = 90_000L;
 
     private static final TunnelManager INSTANCE = new TunnelManager();
@@ -41,10 +41,10 @@ public final class TunnelManager {
     private volatile String loginMessage = "";
 
     private volatile TunnelProcess process;
-    /** 接続試行ごとの識別子。古いワーカーの結果を無視するために使う。 */
     private volatile int session;
     private Thread worker;
     private GuiScreen parent;
+    private String displayName = "";
     private boolean joinedWorld;
     private long handoffAt;
     private long disconnectSeenAt;
@@ -92,13 +92,14 @@ public final class TunnelManager {
         return state == State.STARTING || state == State.READY;
     }
 
-    public void connect(GuiScreen parentScreen, TunnelProfile profile) {
-        if (profile == null || !profile.hasValidHostname()) {
+    public void connect(GuiScreen parentScreen, String serverName, String hostname, int preferredPort) {
+        if (hostname == null || hostname.trim().isEmpty()) {
             return;
         }
         cancel();
         final int mySession = session;
         this.parent = parentScreen;
+        this.displayName = serverName == null || serverName.isEmpty() ? hostname : serverName;
         this.errorMessage = "";
         this.errorLogTail = "";
         this.errorLogPath = "";
@@ -108,11 +109,12 @@ public final class TunnelManager {
         this.disconnectSeenAt = 0L;
         this.state = State.STARTING;
 
-        final TunnelProfile snapshot = profile.copy();
+        final String host = hostname.trim();
+        final int port = Math.max(0, preferredPort);
         worker = new Thread(new Runnable() {
             @Override
             public void run() {
-                runConnect(snapshot, mySession);
+                runConnect(host, port, mySession);
             }
         }, "cftunnel-connect");
         worker.setDaemon(true);
@@ -123,25 +125,26 @@ public final class TunnelManager {
         return mySession == session;
     }
 
-    private void runConnect(TunnelProfile profile, int mySession) {
+    private void runConnect(String hostname, int preferredPort, int mySession) {
         TunnelProcess local = null;
         try {
-            File binary = CloudflaredBinary.resolve(profile, new CloudflaredBinary.Progress() {
-                @Override
-                public void report(String message, double fraction) {
-                    if (state == State.STARTING) {
-                        statusText = message;
-                        progress = fraction;
-                    }
-                }
-            });
+            File binary = CloudflaredBinary.resolve(Config.cloudflaredPath(),
+                    new CloudflaredBinary.Progress() {
+                        @Override
+                        public void report(String message, double fraction) {
+                            if (state == State.STARTING) {
+                                statusText = message;
+                                progress = fraction;
+                            }
+                        }
+                    });
             if (!isCurrent(mySession)) {
                 return;
             }
 
             statusText = Lang.t("status.startingProcess");
             progress = -1.0;
-            int port = profile.localPort > 0 ? profile.localPort : Ports.findFree(25600, 25700);
+            int port = preferredPort > 0 ? preferredPort : Ports.findFree(25600, 25700);
             if (port <= 0) {
                 throw new TunnelException(Lang.t("error.noFreePort"));
             }
@@ -151,7 +154,7 @@ public final class TunnelManager {
 
             local = new TunnelProcess();
             process = local;
-            local.start(binary, profile, port);
+            local.start(binary, hostname, port);
 
             statusText = Lang.t("status.waitingReady");
             local.waitUntilReady(Config.readyTimeoutSeconds());
@@ -190,7 +193,7 @@ public final class TunnelManager {
         errorLogPath = failed != null ? failed.logPath() : "";
         process = null;
         state = State.FAILED;
-        CfTunnelMod.LOG.error("トンネル接続に失敗しました: {}", message, t);
+        CfTunnelMod.LOG.error("Tunnel connection failed: {}", message, t);
 
         runOnMainThread(new Runnable() {
             @Override
@@ -213,13 +216,15 @@ public final class TunnelManager {
         if (mc == null) {
             return;
         }
-        ServerData serverData = new ServerData("Cloudflare Tunnel", "127.0.0.1:" + port);
+        ServerData serverData = new ServerData(displayName, "127.0.0.1:" + port);
         GuiScreen from = parent != null ? parent : mc.currentScreen;
         handoffAt = System.currentTimeMillis();
         joinedWorld = false;
         state = State.CONNECTED;
-        CfTunnelMod.LOG.info("127.0.0.1:{} へ接続します", Integer.valueOf(port));
-        mc.displayGuiScreen(new GuiConnecting(from, mc, serverData));
+        CfTunnelMod.LOG.info("Connecting to 127.0.0.1:{}", Integer.valueOf(port));
+        // Creating GuiConnecting directly leaves FML's playClientBlock null and
+        // breaks the handshake, so use the official entry point.
+        FMLClientHandler.instance().connectToServer(from, serverData);
     }
 
     public void cancel() {
@@ -232,7 +237,7 @@ public final class TunnelManager {
     }
 
     /**
-     * クライアント tick から毎フレーム呼ばれる。メインスレッド処理と切断検知を行う。
+     * Called every client tick. Drains main-thread work and watches for disconnects.
      */
     public void tick() {
         Runnable task;
@@ -240,7 +245,7 @@ public final class TunnelManager {
             try {
                 task.run();
             } catch (Throwable t) {
-                CfTunnelMod.LOG.error("メインスレッド処理で例外が発生しました", t);
+                CfTunnelMod.LOG.error("Exception in main-thread task", t);
             }
         }
 
@@ -257,18 +262,18 @@ public final class TunnelManager {
             joinedWorld = true;
         }
         if (joinedWorld && mc.theWorld == null) {
-            CfTunnelMod.LOG.info("サーバーから切断されたためトンネルを停止します");
+            CfTunnelMod.LOG.info("Disconnected from server, stopping tunnel");
             cancel();
             return;
         }
         if (!joinedWorld && state == State.CONNECTED
                 && System.currentTimeMillis() - handoffAt > HANDOFF_TIMEOUT_MS) {
-            CfTunnelMod.LOG.warn("サーバーへ参加できないままタイムアウトしたためトンネルを停止します");
+            CfTunnelMod.LOG.warn("Timed out waiting to join, stopping tunnel");
             cancel();
             return;
         }
 
-        // 参加前に切断された場合、cloudflared 側の本当の原因を表示する
+        // If the join fails before the world loads, surface the real cloudflared error.
         if (!joinedWorld && state == State.CONNECTED) {
             if (mc.currentScreen instanceof GuiDisconnected) {
                 if (disconnectSeenAt == 0L) {
@@ -291,13 +296,12 @@ public final class TunnelManager {
             }
         }
         if (!current.isAlive()) {
-            CfTunnelMod.LOG.warn("cloudflared が予期せず終了しました");
+            CfTunnelMod.LOG.warn("cloudflared exited unexpectedly");
             stopQuietly();
             state = State.IDLE;
             return;
         }
         if (state == State.READY) {
-            // 接続画面へ遷移するまでの短い猶予。プロセスが生きていれば何もしない。
             statusText = Lang.t("status.handoff");
         }
     }
@@ -325,23 +329,19 @@ public final class TunnelManager {
         }, "cftunnel-shutdown"));
     }
 
-    // ------------------------------------------------------------------
-    // ログイン
-    // ------------------------------------------------------------------
-
-    public void loginAsync(final TunnelProfile profile, final Runnable onFinished) {
-        if (loginRunning || profile == null || !profile.hasValidHostname()) {
+    public void loginAsync(final String hostname, final Runnable onFinished) {
+        if (loginRunning || hostname == null || hostname.trim().isEmpty()) {
             return;
         }
         loginRunning = true;
         loginMessage = Lang.t("status.loginPreparing");
-        final TunnelProfile snapshot = profile.copy();
+        final String host = hostname.trim();
         Thread thread = new Thread(new Runnable() {
             @Override
             public void run() {
                 String result;
                 try {
-                    File binary = CloudflaredBinary.resolve(snapshot, null);
+                    File binary = CloudflaredBinary.resolve(Config.cloudflaredPath(), null);
                     File logFile = new File(new File(CfTunnelMod.logDir(), "cftunnel"),
                             "login-" + System.currentTimeMillis() + ".log");
                     File dir = logFile.getParentFile();
@@ -349,7 +349,7 @@ public final class TunnelManager {
                         dir.mkdirs();
                     }
                     loginMessage = Lang.t("status.loginBrowser");
-                    int code = CloudflaredBinary.login(binary, snapshot.hostnameOrEmpty(), logFile);
+                    int code = CloudflaredBinary.login(binary, host, logFile);
                     String output = Files2.readAll(logFile);
                     if (code == 0) {
                         result = Lang.t("status.loginOk");
