@@ -71,9 +71,16 @@ public final class ServerConfigStore {
         if (server == null || server.serverIP == null) {
             return null;
         }
-        String key = server.serverIP.trim();
+        return findByKey(server.serverIP.trim());
+    }
+
+    public ServerTunnelConfig findByKey(String key) {
+        if (key == null) {
+            return null;
+        }
+        String value = key.trim();
         for (ServerTunnelConfig cfg : configs) {
-            if (key.equals(cfg.serverKey)) {
+            if (value.equals(cfg.serverKey)) {
                 return cfg;
             }
         }
@@ -105,6 +112,7 @@ public final class ServerConfigStore {
             existing.enabled = cfg.enabled;
             existing.hostname = cfg.hostname;
             existing.localPort = cfg.localPort;
+            existing.serviceTokenPath = cfg.serviceTokenPath;
         }
         save();
     }

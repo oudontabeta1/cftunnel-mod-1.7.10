@@ -11,7 +11,7 @@ buildscript {
 
 apply plugin: 'forge'
 
-version = "1.1.0"
+version = "1.3.3"
 group = "dev.oudon.cftunnel"
 archivesBaseName = "cftunnel"
 
@@ -54,6 +54,14 @@ afterEvaluate {
         serverTask.url = new net.minecraftforge.gradle.delayed.DelayedString(
                 project,
                 'https://launcher.mojang.com/v1/objects/952438ac4e01b4d115c5fc38f891710c4941df29/server.jar')
+    }
+
+    // The asset download host also uses a retired http:// URL and only produces
+    // errors. Assets are not needed to compile the mod, so skip them unless
+    // explicitly requested with -PdownloadAssets.
+    def assetsTask = tasks.findByName('getAssets')
+    if (assetsTask != null && !project.hasProperty('downloadAssets')) {
+        assetsTask.enabled = false
     }
 }
 

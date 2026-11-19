@@ -8,12 +8,18 @@ cftunnel.button.cancel=キャンセル
 cftunnel.button.login=ログイン
 cftunnel.button.copy=コピー
 cftunnel.button.close=閉じる
+cftunnel.button.browse=参照...
+cftunnel.button.select=選択
+cftunnel.button.copyUrl=URLをコピー
+cftunnel.button.openBrowser=ブラウザで開く
 
 cftunnel.server.title=このサーバーの Cloudflare Tunnel
 cftunnel.server.hostname=ホスト名
 cftunnel.server.hostnameHint=トンネルの公開ホスト名（スキームやポートは不要）
 cftunnel.server.port=ローカルポート
 cftunnel.server.portHint=（空 = 自動）
+cftunnel.server.token=サービストークンファイル
+cftunnel.server.tokenHint=任意（Cloudflare Access のサービストークン。空 = ログインを使用）
 cftunnel.server.toggleOn=Cloudflare Tunnel: ON
 cftunnel.server.toggleOff=Cloudflare Tunnel: OFF
 cftunnel.server.statusOn=Cloudflare: %s%s
@@ -32,6 +38,10 @@ cftunnel.settings.logs=ログ: %s
 cftunnel.settings.errorVersion=cloudflared のリリースバージョンを入力してください
 cftunnel.settings.errorTimeout=接続待ち時間は 5〜300 秒で指定してください
 
+cftunnel.pickup.title=サービストークンファイルを選択
+cftunnel.pickup.up=上へ
+cftunnel.pickup.notFound=ファイルが見つかりません
+
 cftunnel.status.preparing=cloudflared を準備しています...
 cftunnel.status.downloading=cloudflared をダウンロードしています...
 cftunnel.status.verifying=cloudflared を検証しています...
@@ -40,12 +50,15 @@ cftunnel.status.waitingReady=トンネルの確立を待っています...
 cftunnel.status.handoff=サーバーに接続しています...
 cftunnel.status.loginPreparing=ログインを準備しています...
 cftunnel.status.loginBrowser=ブラウザでログインを完了してください
+cftunnel.status.waitingLogin=Cloudflare Access のログイン待ちです（ブラウザで完了してください）
 cftunnel.status.loginOk=ログインが完了しました
 cftunnel.status.loginNotProtected=このホスト名は Cloudflare Access で保護されていないため、ログインは不要です
 cftunnel.status.loginFailed=ログインに失敗しました（終了コード %s）。%s を確認してください
 
 cftunnel.progress.title=トンネルを確立しています
 cftunnel.progress.hint=初回は少し時間がかかります
+cftunnel.progress.openHint=ブラウザが開かない場合は次のURLを開いてください:
+cftunnel.progress.copied=URLをクリップボードにコピーしました
 
 cftunnel.error.title=接続に失敗しました
 cftunnel.error.logTail=cloudflared の出力:
@@ -56,6 +69,7 @@ cftunnel.error.invalidPort=ポートは 1〜65535 の範囲で指定してくだ
 cftunnel.error.pathMissing=cloudflared が見つかりません: %s
 cftunnel.error.portInUse=ローカルポート %s は既に使用中です。別のポートを指定してください。
 cftunnel.error.disconnected=サーバーに参加する前に切断されました。
+cftunnel.error.disconnectedDetail=サーバーから切断されました: %s
 cftunnel.error.handshake=Cloudflare Tunnel に到達できませんでした（エッジが HTTP 502 / bad handshake を返しています）。\n公開ホスト名の設定と、サーバー側で cloudflared tunnel run が動いているかを確認してください。
 cftunnel.error.noFreePort=空いているローカルポートがありません
 cftunnel.error.readyTimeout=%s 秒以内にトンネルが確立できませんでした\n%s
@@ -69,3 +83,5 @@ cftunnel.error.unsupportedPlatform=未対応のプラットフォームです（
 cftunnel.error.loginTimeout=ログインがタイムアウトしました
 cftunnel.error.extractTimeout=cloudflared の展開がタイムアウトしました
 cftunnel.error.extractFailed=cloudflared の展開に失敗しました（終了コード %s）
+cftunnel.error.tokenMissing=サービストークンファイルが見つかりません: %s
+cftunnel.error.tokenInvalid=サービストークンファイルを解釈できません（JSON の client_id/client_secret、または id/secret の2行を想定）: %s

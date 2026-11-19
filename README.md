@@ -81,6 +81,29 @@ returns HTTP 502.
 The current state for the selected server is shown at the top-left of the screen
 (`Cloudflare: mc.example.com (auto)` / `Cloudflare: off`).
 
+### Server list ping
+
+While the multiplayer screen is open, a tunnel is kept warm for the selected
+server. The server list ping is sent through that tunnel, so the status turns
+green instead of showing a red X. The tunnel is stopped when you leave the
+screen.
+
+### Service tokens
+
+Instead of the interactive browser login, you can authenticate with a Cloudflare
+Access service token file. Set **Service token file** in the per-server dialog or
+press **Browse...**.
+
+Supported file formats:
+
+- JSON with `client_id` and `client_secret` (also `id`/`secret`, `service_token_id`/`service_token_secret`)
+- Two lines: token id, then token secret
+- One line: `id:secret`
+
+The token is passed to `cloudflared` through environment variables
+(`TUNNEL_SERVICE_TOKEN_ID` / `TUNNEL_SERVICE_TOKEN_SECRET`), so it does not appear
+on the command line or in the mod log.
+
 ### Cloudflare Access
 
 If the hostname is protected by Cloudflare Access, press **Login** to authenticate in

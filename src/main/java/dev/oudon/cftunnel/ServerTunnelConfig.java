@@ -11,6 +11,8 @@ public class ServerTunnelConfig {
     public String hostname = "";
     /** Local port used by cloudflared. 0 means auto. */
     public int localPort;
+    /** Optional Cloudflare Access service token file. */
+    public String serviceTokenPath = "";
 
     public ServerTunnelConfig() {
     }
@@ -22,5 +24,9 @@ public class ServerTunnelConfig {
     public String hostnameOr(String fallback) {
         String value = hostname == null ? "" : hostname.trim();
         return value.isEmpty() ? fallback : value;
+    }
+
+    public String tokenPathOrEmpty() {
+        return serviceTokenPath == null ? "" : serviceTokenPath.trim();
     }
 }

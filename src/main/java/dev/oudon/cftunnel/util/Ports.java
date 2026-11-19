@@ -53,4 +53,24 @@ public final class Ports {
             }
         }
     }
+
+    /**
+     * Waits until the port can be bound, for example while a previous
+     * cloudflared process is still shutting down.
+     */
+    public static boolean waitFree(int port, long timeoutMs) {
+        long deadline = System.currentTimeMillis() + timeoutMs;
+        while (System.currentTimeMillis() < deadline) {
+            if (isFree(port)) {
+                return true;
+            }
+            try {
+                Thread.sleep(150L);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return false;
+            }
+        }
+        return isFree(port);
+    }
 }

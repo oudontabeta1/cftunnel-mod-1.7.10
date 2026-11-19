@@ -27,33 +27,43 @@ public final class CloudflaredBinary {
 
     private static final String RELEASE_BASE = "https://github.com/cloudflare/cloudflared/releases/download/";
     private static final Map<String, Long> VERIFIED = new HashMap<String, Long>();
+    private static final Object RESOLVE_LOCK = new Object();
+    private static final Object LOGIN_LOCK = new Object();
+    private static boolean loginRunning;
+    private static String loginHost;
+    private static int loginResult;
 
     private CloudflaredBinary() {
     }
 
     public static File resolve(String explicitPath, Progress progress) throws Exception {
-        String configuredPath = explicitPath == null ? "" : explicitPath.trim();
-        if (!configuredPath.isEmpty()) {
-            File configured = new File(configuredPath);
-            if (!configured.isFile()) {
-                throw new TunnelException(Lang.f("error.pathMissing", configuredPath));
+        synchronized (RESOLVE_LOCK) {
+            String configuredPath = explicitPath == null ? "" : explicitPath.trim();
+            if (!configuredPath.isEmpty()) {
+                File configured = new File(configuredPath);
+                if (!configured.isFile()) {
+                    throw new TunnelException(Lang.f("error.pathMissing", configuredPath));
+                }
+                return configured;
             }
-            return configured;
-        }
 
-        File target = cachedBinaryFile();
-        if (target.isFile() && isVerified(target)) {
+            File target = cachedBinaryFile();
+            if (verify(target)) {
+                return target;
+            }
+            // Reuse the existing binary if possible; replacing a running
+            // executable is denied by Windows, so only delete after a failed
+            // verification.
+            if (target.exists()) {
+                Files2.deleteQuietly(target);
+            }
+            download(target, progress);
+            if (!verify(target)) {
+                Files2.deleteQuietly(target);
+                throw new TunnelException(Lang.f("error.verifyFailed", target.getAbsolutePath()));
+            }
             return target;
         }
-        if (target.exists()) {
-            Files2.deleteQuietly(target);
-        }
-        download(target, progress);
-        if (!verify(target)) {
-            Files2.deleteQuietly(target);
-            throw new TunnelException(Lang.f("error.verifyFailed", target.getAbsolutePath()));
-        }
-        return target;
     }
 
     public static File cachedBinaryFile() {
@@ -65,20 +75,60 @@ public final class CloudflaredBinary {
      * Runs "cloudflared access login", which opens the browser.
      */
     public static int login(File cloudflared, String hostname, File logFile) throws Exception {
-        String url = hostname;
+        String url = hostname == null ? "" : hostname.trim();
         if (!url.startsWith("http://") && !url.startsWith("https://")) {
             url = "https://" + url;
         }
-        ProcessBuilder pb = new ProcessBuilder(
-                cloudflared.getAbsolutePath(), "access", "login", url);
-        pb.redirectErrorStream(true);
-        pb.redirectOutput(ProcessBuilder.Redirect.appendTo(logFile));
-        Process process = pb.start();
-        if (!process.waitFor(180, TimeUnit.SECONDS)) {
-            process.destroyForcibly();
-            throw new TunnelException(Lang.t("error.loginTimeout"));
+        // A trailing slash makes cloudflared's redirect_url match an Access
+        // application registered on "/" (otherwise the browser can show
+        // "Unable to find your Access application / invalid URL").
+        if (!url.endsWith("/")) {
+            url = url + "/";
         }
-        return process.exitValue();
+        final String loginUrl = url;
+
+        synchronized (LOGIN_LOCK) {
+            if (loginRunning && hostname != null && hostname.equals(loginHost)) {
+                // Another join already started the browser login; wait for it.
+                long deadline = System.currentTimeMillis() + 300_000L;
+                while (loginRunning && System.currentTimeMillis() < deadline) {
+                    try {
+                        LOGIN_LOCK.wait(500L);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                }
+                return loginResult;
+            }
+            loginRunning = true;
+            loginHost = hostname;
+            loginResult = -1;
+        }
+
+        try {
+            if (AccessAuth.hasValidToken(hostname)) {
+                loginResult = 0;
+                return 0;
+            }
+            ProcessBuilder pb = new ProcessBuilder(
+                    cloudflared.getAbsolutePath(), "access", "login", loginUrl);
+            pb.redirectErrorStream(true);
+            pb.redirectOutput(ProcessBuilder.Redirect.appendTo(logFile));
+            Process process = pb.start();
+            if (!process.waitFor(300, TimeUnit.SECONDS)) {
+                process.destroyForcibly();
+                throw new TunnelException(Lang.t("error.loginTimeout"));
+            }
+            loginResult = process.exitValue();
+            return loginResult;
+        } finally {
+            synchronized (LOGIN_LOCK) {
+                loginRunning = false;
+                loginHost = null;
+                LOGIN_LOCK.notifyAll();
+            }
+        }
     }
 
     private static void download(File target, Progress progress) throws Exception {
@@ -201,6 +251,9 @@ public final class CloudflaredBinary {
     private static boolean verify(File file) {
         if (!file.isFile() || file.length() < 1024 * 1024) {
             return false;
+        }
+        if (isVerified(file)) {
+            return true;
         }
         if (!hasValidMagic(file)) {
             CfTunnelMod.LOG.warn("Unexpected executable format: {}", file.getAbsolutePath());

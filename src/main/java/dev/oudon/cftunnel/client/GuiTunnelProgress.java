@@ -6,6 +6,9 @@ import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiScreen;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Progress screen shown while the tunnel is being established.
  */
@@ -13,6 +16,10 @@ public class GuiTunnelProgress extends GuiScreen {
 
     private final GuiScreen parent;
     private final String displayName;
+
+    private GuiButton copyButton;
+    private GuiButton openButton;
+    private String copiedNotice = "";
 
     public GuiTunnelProgress(GuiScreen parent, String displayName) {
         this.parent = parent;
@@ -22,8 +29,26 @@ public class GuiTunnelProgress extends GuiScreen {
     @Override
     public void initGui() {
         buttonList.clear();
-        buttonList.add(new GuiButton(1, width / 2 - 60, height / 2 + 46, 120, 20,
-                Lang.t("button.cancel")));
+        int center = width / 2;
+        int y = height / 2 + 72;
+        copyButton = new GuiButton(2, center - 150, y, 90, 20, Lang.t("button.copyUrl"));
+        openButton = new GuiButton(3, center - 50, y, 110, 20, Lang.t("button.openBrowser"));
+        buttonList.add(copyButton);
+        buttonList.add(openButton);
+        buttonList.add(new GuiButton(1, center + 70, y, 90, 20, Lang.t("button.cancel")));
+    }
+
+    @Override
+    public void updateScreen() {
+        super.updateScreen();
+        String url = TunnelManager.get().loginUrl();
+        boolean hasUrl = url != null && !url.isEmpty();
+        if (copyButton != null) {
+            copyButton.enabled = hasUrl;
+        }
+        if (openButton != null) {
+            openButton.enabled = hasUrl;
+        }
     }
 
     @Override
@@ -57,10 +82,48 @@ public class GuiTunnelProgress extends GuiScreen {
                     0xFFFFFF);
         }
 
-        drawCenteredString(fontRendererObj, Lang.t("progress.hint"), width / 2,
-                height / 2 + 24, 0x808080);
+        String url = manager.loginUrl();
+        if (url != null && !url.isEmpty()) {
+            drawCenteredString(fontRendererObj, Lang.t("progress.openHint"), width / 2,
+                    height / 2 + 18, 0xE0C060);
+            int y = height / 2 + 30;
+            for (String line : wrap(url, 420, 3)) {
+                drawCenteredString(fontRendererObj, line, width / 2, y, 0x9E9E9E);
+                y += 10;
+            }
+        } else {
+            drawCenteredString(fontRendererObj, Lang.t("progress.hint"), width / 2,
+                    height / 2 + 24, 0x808080);
+        }
+
+        if (!copiedNotice.isEmpty()) {
+            drawCenteredString(fontRendererObj, copiedNotice, width / 2, height / 2 + 58,
+                    0x55D06B);
+        }
 
         super.drawScreen(mouseX, mouseY, partialTicks);
+    }
+
+    private List<String> wrap(String text, int maxWidth, int maxLines) {
+        List<String> lines = new ArrayList<String>();
+        String rest = text;
+        while (!rest.isEmpty() && lines.size() < maxLines) {
+            int index = 0;
+            while (index < rest.length()
+                    && fontRendererObj.getStringWidth(rest.substring(0, index + 1)) <= maxWidth) {
+                index++;
+            }
+            if (index <= 0) {
+                index = Math.min(1, rest.length());
+            }
+            if (index < rest.length() && lines.size() == maxLines - 1) {
+                lines.add(rest.substring(0, Math.max(0, index - 3)) + "...");
+                return lines;
+            }
+            lines.add(rest.substring(0, index));
+            rest = rest.substring(index);
+        }
+        return lines;
     }
 
     private String trim(String text, int maxWidth) {
@@ -90,8 +153,31 @@ public class GuiTunnelProgress extends GuiScreen {
 
     @Override
     protected void actionPerformed(GuiButton button) {
+        String url = TunnelManager.get().loginUrl();
         if (button.id == 1) {
             cancel();
+        } else if (button.id == 2 && url != null && !url.isEmpty()) {
+            setClipboardString(url);
+            copiedNotice = Lang.t("progress.copied");
+        } else if (button.id == 3 && url != null && !url.isEmpty()) {
+            openBrowser(url);
+        }
+    }
+
+    private void openBrowser(String url) {
+        try {
+            String os = System.getProperty("os.name", "").toLowerCase();
+            ProcessBuilder pb;
+            if (os.contains("win")) {
+                pb = new ProcessBuilder("rundll32", "url.dll,FileProtocolHandler", url);
+            } else if (os.contains("mac")) {
+                pb = new ProcessBuilder("open", url);
+            } else {
+                pb = new ProcessBuilder("xdg-open", url);
+            }
+            pb.start();
+        } catch (Exception ignored) {
+            // The user can still copy the URL manually.
         }
     }
 

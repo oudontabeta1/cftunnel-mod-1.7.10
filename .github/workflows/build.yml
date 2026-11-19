@@ -1,0 +1,57 @@
+name: Build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '8'
+
+      - name: Restore Gradle caches
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches/minecraft
+            ~/.gradle/caches/modules-2
+            ~/.gradle/wrapper
+          key: forgegradle-1.7.10-${{ hashFiles('build.gradle', 'gradle.properties') }}
+
+      # ForgeGradle 1.2 still points at retired Mojang URLs. Pre-seed the
+      # version JSON and asset index that it downloads from s3.amazonaws.com.
+      - name: Prepare ForgeGradle cache
+        run: |
+          mkdir -p "$HOME/.gradle/caches/minecraft/versionJsons"
+          mkdir -p "$HOME/.gradle/caches/minecraft/assets/indexes"
+          curl -fsSL -o "$HOME/.gradle/caches/minecraft/versionJsons/1.7.10.json" \
+            "https://piston-meta.mojang.com/v1/packages/ed5d8789ed29872ea2ef1c348302b0c55e3f3468/1.7.10.json"
+          curl -fsSL -o "$HOME/.gradle/caches/minecraft/assets/indexes/1.7.10.json" \
+            "https://launchermeta.mojang.com/v1/packages/1863782e33ce7b584fc45b037325a1964e095d3e/1.7.10.json"
+
+      - name: Build
+        run: |
+          chmod +x gradlew
+          ./gradlew build --no-daemon --console=plain
+
+      - name: Upload jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: cftunnel-jar
+          path: |
+            build/libs/*.jar
+            !build/libs/*-dev.jar
+          if-no-files-found: error

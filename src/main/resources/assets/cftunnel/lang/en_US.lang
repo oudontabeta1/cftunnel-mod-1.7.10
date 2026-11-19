@@ -8,12 +8,18 @@ cftunnel.button.cancel=Cancel
 cftunnel.button.login=Login
 cftunnel.button.copy=Copy
 cftunnel.button.close=Close
+cftunnel.button.browse=Browse...
+cftunnel.button.select=Select
+cftunnel.button.copyUrl=Copy URL
+cftunnel.button.openBrowser=Open browser
 
 cftunnel.server.title=Cloudflare Tunnel for this server
 cftunnel.server.hostname=Hostname
 cftunnel.server.hostnameHint=Public hostname of the tunnel (no scheme or port)
 cftunnel.server.port=Local port
 cftunnel.server.portHint=(empty = auto)
+cftunnel.server.token=Service token file
+cftunnel.server.tokenHint=Optional Cloudflare Access service token (empty = use Access login)
 cftunnel.server.toggleOn=Cloudflare Tunnel: ON
 cftunnel.server.toggleOff=Cloudflare Tunnel: OFF
 cftunnel.server.statusOn=Cloudflare: %s%s
@@ -32,6 +38,10 @@ cftunnel.settings.logs=Logs: %s
 cftunnel.settings.errorVersion=Enter a cloudflared release version
 cftunnel.settings.errorTimeout=Timeout must be between 5 and 300 seconds
 
+cftunnel.pickup.title=Select service token file
+cftunnel.pickup.up=Up
+cftunnel.pickup.notFound=File not found
+
 cftunnel.status.preparing=Preparing cloudflared...
 cftunnel.status.downloading=Downloading cloudflared...
 cftunnel.status.verifying=Verifying cloudflared...
@@ -40,12 +50,15 @@ cftunnel.status.waitingReady=Waiting for the tunnel to be ready...
 cftunnel.status.handoff=Joining the server...
 cftunnel.status.loginPreparing=Preparing login...
 cftunnel.status.loginBrowser=Complete the login in your browser
+cftunnel.status.waitingLogin=Waiting for Cloudflare Access login (complete it in your browser)
 cftunnel.status.loginOk=Login finished
 cftunnel.status.loginNotProtected=This hostname is not protected by Cloudflare Access, so login is not required.
 cftunnel.status.loginFailed=Login failed (exit %s). See %s
 
 cftunnel.progress.title=Establishing tunnel
 cftunnel.progress.hint=This can take a while on the first run
+cftunnel.progress.openHint=If the browser did not open, use this URL:
+cftunnel.progress.copied=URL copied to clipboard
 
 cftunnel.error.title=Connection failed
 cftunnel.error.logTail=cloudflared output:
@@ -56,6 +69,7 @@ cftunnel.error.invalidPort=Port must be between 1 and 65535
 cftunnel.error.pathMissing=cloudflared was not found: %s
 cftunnel.error.portInUse=Local port %s is already in use. Choose another port.
 cftunnel.error.disconnected=Disconnected before joining the server.
+cftunnel.error.disconnectedDetail=Server disconnected the client: %s
 cftunnel.error.handshake=Could not reach the Cloudflare Tunnel (the edge returned HTTP 502 / bad handshake).\nCheck the tunnel's public hostname and make sure cloudflared tunnel run is active on the server.
 cftunnel.error.noFreePort=No free local port is available
 cftunnel.error.readyTimeout=Tunnel did not become ready within %s seconds\n%s
@@ -69,3 +83,5 @@ cftunnel.error.unsupportedPlatform=Unsupported platform (%s / %s). Set the cloud
 cftunnel.error.loginTimeout=Login timed out
 cftunnel.error.extractTimeout=Extracting cloudflared timed out
 cftunnel.error.extractFailed=Extracting cloudflared failed (exit %s)
+cftunnel.error.tokenMissing=Service token file was not found: %s
+cftunnel.error.tokenInvalid=Could not parse the service token file (expected JSON client_id/client_secret or two lines id/secret): %s

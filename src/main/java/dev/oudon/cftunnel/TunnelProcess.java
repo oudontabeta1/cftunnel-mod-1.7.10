@@ -31,7 +31,7 @@ public final class TunnelProcess {
     private File logFile;
     private int port = -1;
 
-    public void start(File cloudflared, String hostname, int localPort) throws Exception {
+    public void start(File cloudflared, String hostname, int localPort, ServiceToken token) throws Exception {
         this.port = localPort;
         this.logFile = newLogFile(hostname);
 
@@ -50,6 +50,12 @@ public final class TunnelProcess {
         ProcessBuilder pb = new ProcessBuilder(command);
         pb.redirectErrorStream(true);
         pb.environment().put("NO_AUTOUPDATE", "true");
+        if (token != null) {
+            // Use environment variables so the secret never appears on the
+            // command line or in this mod's log output.
+            pb.environment().put("TUNNEL_SERVICE_TOKEN_ID", token.id);
+            pb.environment().put("TUNNEL_SERVICE_TOKEN_SECRET", token.secret);
+        }
         process = pb.start();
         startLogReader();
     }

@@ -1,6 +1,7 @@
 package dev.oudon.cftunnel;
 
 import cpw.mods.fml.client.FMLClientHandler;
+import cpw.mods.fml.relauncher.ReflectionHelper;
 import dev.oudon.cftunnel.client.GuiTunnelError;
 import dev.oudon.cftunnel.util.Files2;
 import dev.oudon.cftunnel.util.Ports;
@@ -9,8 +10,10 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiDisconnected;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.multiplayer.ServerData;
+import net.minecraft.util.IChatComponent;
 
 import java.io.File;
+import java.lang.reflect.Field;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -28,6 +31,9 @@ public final class TunnelManager {
 
     private static final TunnelManager INSTANCE = new TunnelManager();
 
+    /** GuiDisconnected.message / field_146304_f */
+    private static final Field DISCONNECT_MESSAGE = findDisconnectMessage();
+
     private final Queue<Runnable> mainThreadTasks = new ConcurrentLinkedQueue<Runnable>();
 
     private volatile State state = State.IDLE;
@@ -39,6 +45,7 @@ public final class TunnelManager {
 
     private volatile boolean loginRunning;
     private volatile String loginMessage = "";
+    private volatile String loginUrl = "";
 
     private volatile TunnelProcess process;
     private volatile int session;
@@ -50,6 +57,29 @@ public final class TunnelManager {
     private long disconnectSeenAt;
 
     private TunnelManager() {
+    }
+
+    private static Field findDisconnectMessage() {
+        try {
+            return ReflectionHelper.findField(GuiDisconnected.class, "message", "field_146304_f");
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
+    private static String disconnectDetail(GuiScreen screen) {
+        if (DISCONNECT_MESSAGE == null || !(screen instanceof GuiDisconnected)) {
+            return "";
+        }
+        try {
+            Object value = DISCONNECT_MESSAGE.get(screen);
+            if (value instanceof IChatComponent) {
+                return ((IChatComponent) value).getUnformattedText().trim();
+            }
+        } catch (Throwable t) {
+            // ignore
+        }
+        return "";
     }
 
     public static TunnelManager get() {
@@ -88,14 +118,20 @@ public final class TunnelManager {
         return loginMessage;
     }
 
+    public String loginUrl() {
+        return loginUrl;
+    }
+
     public boolean isBusy() {
         return state == State.STARTING || state == State.READY;
     }
 
-    public void connect(GuiScreen parentScreen, String serverName, String hostname, int preferredPort) {
+    public void connect(GuiScreen parentScreen, String serverName, String hostname,
+                        int preferredPort, String tokenPath) {
         if (hostname == null || hostname.trim().isEmpty()) {
             return;
         }
+        PingTunnel.stop();
         cancel();
         final int mySession = session;
         this.parent = parentScreen;
@@ -111,10 +147,11 @@ public final class TunnelManager {
 
         final String host = hostname.trim();
         final int port = Math.max(0, preferredPort);
+        final String token = tokenPath == null ? "" : tokenPath.trim();
         worker = new Thread(new Runnable() {
             @Override
             public void run() {
-                runConnect(host, port, mySession);
+                runConnect(host, port, token, mySession);
             }
         }, "cftunnel-connect");
         worker.setDaemon(true);
@@ -125,7 +162,37 @@ public final class TunnelManager {
         return mySession == session;
     }
 
-    private void runConnect(String hostname, int preferredPort, int mySession) {
+    /**
+     * Reads the login URL that cloudflared prints, so it can be shown in the GUI
+     * when the browser does not open.
+     */
+    private Thread watchLoginUrl(final File logFile) {
+        loginUrl = "";
+        Thread thread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                for (int i = 0; i < 600; i++) {
+                    String text = Files2.readAll(logFile);
+                    java.util.regex.Matcher matcher =
+                            java.util.regex.Pattern.compile("https://\\S+").matcher(text);
+                    if (matcher.find()) {
+                        loginUrl = matcher.group();
+                        return;
+                    }
+                    try {
+                        Thread.sleep(500L);
+                    } catch (InterruptedException e) {
+                        return;
+                    }
+                }
+            }
+        }, "cftunnel-login-url");
+        thread.setDaemon(true);
+        thread.start();
+        return thread;
+    }
+
+    private void runConnect(String hostname, int preferredPort, String tokenPath, int mySession) {
         TunnelProcess local = null;
         try {
             File binary = CloudflaredBinary.resolve(Config.cloudflaredPath(),
@@ -138,23 +205,52 @@ public final class TunnelManager {
                             }
                         }
                     });
+            ServiceToken serviceToken = ServiceToken.load(tokenPath);
             if (!isCurrent(mySession)) {
                 return;
             }
 
+            // Cloudflare Access: complete the browser login before Minecraft
+            // connects, otherwise the connection is reset and looks like a kick.
+            if (AccessAuth.needsLoginBlocking(hostname)) {
+                statusText = Lang.t("status.waitingLogin");
+                progress = -1.0;
+                File loginDir = new File(CfTunnelMod.logDir(), "cftunnel");
+                if (!loginDir.isDirectory() && !loginDir.mkdirs()) {
+                    throw new TunnelException(Lang.f("error.mkdirFailed", loginDir.getAbsolutePath()));
+                }
+                File loginLog = new File(loginDir, "login-" + System.currentTimeMillis() + ".log");
+                Thread watcher = watchLoginUrl(loginLog);
+                int code = CloudflaredBinary.login(binary, hostname, loginLog);
+                watcher.interrupt();
+                if (code != 0) {
+                    throw new TunnelException(Lang.f("status.loginFailed",
+                            Integer.valueOf(code), loginLog.getAbsolutePath()));
+                }
+                loginUrl = "";
+                if (!isCurrent(mySession)) {
+                    return;
+                }
+            }
+
             statusText = Lang.t("status.startingProcess");
             progress = -1.0;
-            int port = preferredPort > 0 ? preferredPort : Ports.findFree(25600, 25700);
-            if (port <= 0) {
-                throw new TunnelException(Lang.t("error.noFreePort"));
-            }
-            if (!Ports.isFree(port)) {
-                throw new TunnelException(Lang.f("error.portInUse", Integer.valueOf(port)));
+            int port;
+            if (preferredPort > 0) {
+                if (!Ports.waitFree(preferredPort, 5000L)) {
+                    throw new TunnelException(Lang.f("error.portInUse", Integer.valueOf(preferredPort)));
+                }
+                port = preferredPort;
+            } else {
+                port = Ports.findFree(25600, 25700);
+                if (port <= 0) {
+                    throw new TunnelException(Lang.t("error.noFreePort"));
+                }
             }
 
             local = new TunnelProcess();
             process = local;
-            local.start(binary, hostname, port);
+            local.start(binary, hostname, port, serviceToken);
 
             statusText = Lang.t("status.waitingReady");
             local.waitUntilReady(Config.readyTimeoutSeconds());
@@ -231,6 +327,7 @@ public final class TunnelManager {
         session++;
         stopQuietly();
         disconnectSeenAt = 0L;
+        loginUrl = "";
         state = State.IDLE;
         statusText = "";
         progress = -1.0;
@@ -281,13 +378,24 @@ public final class TunnelManager {
                 } else if (System.currentTimeMillis() - disconnectSeenAt >= 800L) {
                     String tail = current.tailText(Config.logTailLines());
                     String path = current.logPath();
+                    String detail = disconnectDetail(mc.currentScreen);
                     stopQuietly();
                     state = State.IDLE;
-                    String message = Lang.t("error.disconnected");
-                    if (tail.contains("bad handshake") || tail.contains("failed to connect to origin")
-                            || tail.contains("502")) {
+                    boolean tunnelError = tail.contains("ERR")
+                            || tail.contains("bad handshake")
+                            || tail.contains("failed to connect to origin")
+                            || tail.contains("502")
+                            || tail.contains("dial tcp")
+                            || tail.contains("connection refused");
+                    String message;
+                    if (tunnelError) {
                         message = Lang.t("error.handshake");
+                    } else if (!detail.isEmpty()) {
+                        message = Lang.f("error.disconnectedDetail", detail);
+                    } else {
+                        message = Lang.t("error.disconnected");
                     }
+                    CfTunnelMod.LOG.info("Disconnected before joining: {}", detail);
                     mc.displayGuiScreen(new GuiTunnelError(parent, message, tail, path));
                     return;
                 }
@@ -312,6 +420,24 @@ public final class TunnelManager {
         }
     }
 
+    /**
+     * Takes over a tunnel that was kept warm for the server list so the normal
+     * disconnect handling still stops it.
+     */
+    public void adopt(PingTunnel.Session session) {
+        if (session == null) {
+            return;
+        }
+        cancel();
+        process = session.process;
+        joinedWorld = false;
+        disconnectSeenAt = 0L;
+        handoffAt = System.currentTimeMillis();
+        displayName = "Cloudflare Tunnel";
+        state = State.CONNECTED;
+        CfTunnelMod.LOG.info("Adopted server list tunnel on 127.0.0.1:{}", Integer.valueOf(session.port));
+    }
+
     public void stopQuietly() {
         TunnelProcess current = process;
         process = null;
@@ -324,6 +450,7 @@ public final class TunnelManager {
         Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
             @Override
             public void run() {
+                PingTunnel.stop();
                 stopQuietly();
             }
         }, "cftunnel-shutdown"));
@@ -349,7 +476,9 @@ public final class TunnelManager {
                         dir.mkdirs();
                     }
                     loginMessage = Lang.t("status.loginBrowser");
+                    Thread watcher = watchLoginUrl(logFile);
                     int code = CloudflaredBinary.login(binary, host, logFile);
+                    watcher.interrupt();
                     String output = Files2.readAll(logFile);
                     if (code == 0) {
                         result = Lang.t("status.loginOk");
