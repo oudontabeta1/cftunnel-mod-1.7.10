@@ -1,0 +1,16 @@
+[
+  {
+    "modid": "cftunnel",
+    "name": "Cloudflared Tunnel Connect",
+    "description": "Connect to Minecraft servers published through a Cloudflare Tunnel from a client-side GUI.",
+    "version": "${version}",
+    "mcversion": "1.7.10",
+    "url": "",
+    "updateUrl": "",
+    "authorList": ["oudon"],
+    "credits": "",
+    "logoFile": "",
+    "screenshots": [],
+    "dependencies": []
+  }
+]

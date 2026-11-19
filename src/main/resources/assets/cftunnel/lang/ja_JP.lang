@@ -1,0 +1,71 @@
+key.cftunnel.open=トンネル一覧を開く
+key.categories.cftunnel=Cloudflare Tunnel
+
+cftunnel.button.tunnels=トンネル
+cftunnel.button.connect=接続
+cftunnel.button.add=追加
+cftunnel.button.edit=編集
+cftunnel.button.delete=削除
+cftunnel.button.deleteConfirm=本当に削除?
+cftunnel.button.login=ログイン
+cftunnel.button.done=閉じる
+cftunnel.button.save=保存
+cftunnel.button.cancel=キャンセル
+cftunnel.button.copy=コピー
+cftunnel.button.close=閉じる
+
+cftunnel.gui.title=Cloudflare Tunnel
+cftunnel.gui.subtitle=Cloudflare Tunnel 経由で公開されたサーバーに接続します
+cftunnel.gui.empty=トンネルがありません。「追加」から作成してください。
+
+cftunnel.list.busy=接続中...
+cftunnel.list.connected=接続中
+cftunnel.list.more=さらに %s 件（スクロール）
+cftunnel.list.deleted=削除しました
+
+cftunnel.edit.title=トンネル設定
+cftunnel.edit.titleNew=トンネルを追加
+cftunnel.edit.name=表示名
+cftunnel.edit.hostname=ホスト名
+cftunnel.edit.hostnameHint=例: mc.example.com（スキームやポートは不要）
+cftunnel.edit.port=ローカルポート
+cftunnel.edit.portHint=（空 = 自動）
+cftunnel.edit.path=cloudflared のパス
+cftunnel.edit.pathHint=空の場合は自動でダウンロードします
+
+cftunnel.status.preparing=cloudflared を準備しています...
+cftunnel.status.downloading=cloudflared をダウンロードしています...
+cftunnel.status.verifying=cloudflared を検証しています...
+cftunnel.status.startingProcess=トンネルを起動しています...
+cftunnel.status.waitingReady=トンネンの確立を待っています...
+cftunnel.status.handoff=サーバーに接続しています...
+cftunnel.status.loginPreparing=ログインを準備しています...
+cftunnel.status.loginBrowser=ブラウザでログインを完了してください
+cftunnel.status.loginOk=ログインが完了しました
+cftunnel.status.loginNotProtected=このホスト名は Cloudflare Access で保護されていないため、ログインは不要です
+cftunnel.status.loginFailed=ログインに失敗しました（終了コード %s）。%s を確認してください
+
+cftunnel.progress.title=トンネルを確立しています
+cftunnel.progress.hint=初回は少し時間がかかります
+cftunnel.error.title=接続に失敗しました
+cftunnel.error.logTail=cloudflared の出力:
+cftunnel.error.logPath=ログ: %s
+cftunnel.error.copied=クリップボードにコピーしました
+cftunnel.error.invalidHostname=有効なホスト名を入力してください（例: mc.example.com）
+cftunnel.error.invalidPort=ポートは 1〜65535 の範囲で指定してください
+cftunnel.error.pathMissing=cloudflared が見つかりません: %s
+cftunnel.error.portInUse=ローカルポート %s は既に使用中です。別のポートを指定してください。
+cftunnel.error.disconnected=サーバーに参加する前に切断されました。
+cftunnel.error.handshake=Cloudflare Tunnel に到達できませんでした（エッジが HTTP 502 / bad handshake を返しています）。\n公開ホスト名の設定と、サーバー側で cloudflared tunnel run が動いているかを確認してください。
+cftunnel.error.noFreePort=空いているローカルポートがありません
+cftunnel.error.readyTimeout=%s 秒以内にトンネルが確立できませんでした\n%s
+cftunnel.error.processExited=cloudflared が終了コード %s で終了しました\n%s
+cftunnel.error.processNotFound=cloudflared のプロセスが見つかりません
+cftunnel.error.downloadHttp=ダウンロードに失敗しました（HTTP %s）\n%s
+cftunnel.error.downloadTooSmall=ダウンロードしたファイルが小さすぎます（%s バイト）
+cftunnel.error.verifyFailed=ダウンロードした cloudflared を検証できませんでした: %s
+cftunnel.error.mkdirFailed=ディレクトリを作成できません: %s
+cftunnel.error.unsupportedPlatform=未対応のプラットフォームです（%s / %s）。cloudflared のパスを手動で指定してください。
+cftunnel.error.loginTimeout=ログインがタイムアウトしました
+cftunnel.error.extractTimeout=cloudflared の展開がタイムアウトしました
+cftunnel.error.extractFailed=cloudflared の展開に失敗しました（終了コード %s）

@@ -1,0 +1,71 @@
+key.cftunnel.open=Open tunnel list
+key.categories.cftunnel=Cloudflare Tunnel
+
+cftunnel.button.tunnels=Tunnels
+cftunnel.button.connect=Connect
+cftunnel.button.add=Add
+cftunnel.button.edit=Edit
+cftunnel.button.delete=Delete
+cftunnel.button.deleteConfirm=Confirm
+cftunnel.button.login=Login
+cftunnel.button.done=Done
+cftunnel.button.save=Save
+cftunnel.button.cancel=Cancel
+cftunnel.button.copy=Copy
+cftunnel.button.close=Close
+
+cftunnel.gui.title=Cloudflare Tunnel
+cftunnel.gui.subtitle=Connect to servers published through a Cloudflare Tunnel
+cftunnel.gui.empty=No tunnels yet. Press Add to create one.
+
+cftunnel.list.busy=Connecting...
+cftunnel.list.connected=Connected
+cftunnel.list.more=+%s more (scroll)
+cftunnel.list.deleted=Deleted
+
+cftunnel.edit.title=Edit Tunnel
+cftunnel.edit.titleNew=New Tunnel
+cftunnel.edit.name=Display name
+cftunnel.edit.hostname=Hostname
+cftunnel.edit.hostnameHint=Example: mc.example.com (no scheme or port)
+cftunnel.edit.port=Local port
+cftunnel.edit.portHint=(empty = auto)
+cftunnel.edit.path=cloudflared path
+cftunnel.edit.pathHint=Leave empty to download cloudflared automatically
+
+cftunnel.status.preparing=Preparing cloudflared...
+cftunnel.status.downloading=Downloading cloudflared...
+cftunnel.status.verifying=Verifying cloudflared...
+cftunnel.status.startingProcess=Starting tunnel process...
+cftunnel.status.waitingReady=Waiting for the tunnel to be ready...
+cftunnel.status.handoff=Joining the server...
+cftunnel.status.loginPreparing=Preparing login...
+cftunnel.status.loginBrowser=Complete the login in your browser
+cftunnel.status.loginOk=Login finished
+cftunnel.status.loginNotProtected=This hostname is not protected by Cloudflare Access, so login is not required.
+cftunnel.status.loginFailed=Login failed (exit %s). See %s
+
+cftunnel.progress.title=Establishing tunnel
+cftunnel.progress.hint=This can take a while on the first run
+cftunnel.error.title=Connection failed
+cftunnel.error.logTail=cloudflared output:
+cftunnel.error.logPath=Log: %s
+cftunnel.error.copied=Copied to clipboard
+cftunnel.error.invalidHostname=Enter a valid hostname (example: mc.example.com)
+cftunnel.error.invalidPort=Port must be between 1 and 65535
+cftunnel.error.pathMissing=cloudflared was not found: %s
+cftunnel.error.portInUse=Local port %s is already in use. Choose another port.
+cftunnel.error.disconnected=Disconnected before joining the server.
+cftunnel.error.handshake=Could not reach the Cloudflare Tunnel (the edge returned HTTP 502 / bad handshake).\nCheck the tunnel's public hostname and make sure cloudflared tunnel run is active on the server.
+cftunnel.error.noFreePort=No free local port is available
+cftunnel.error.readyTimeout=Tunnel did not become ready within %s seconds\n%s
+cftunnel.error.processExited=cloudflared exited with code %s\n%s
+cftunnel.error.processNotFound=cloudflared process is missing
+cftunnel.error.downloadHttp=Download failed (HTTP %s)\n%s
+cftunnel.error.downloadTooSmall=Downloaded file is too small (%s bytes)
+cftunnel.error.verifyFailed=Downloaded cloudflared could not be verified: %s
+cftunnel.error.mkdirFailed=Cannot create directory: %s
+cftunnel.error.unsupportedPlatform=Unsupported platform (%s / %s). Set the cloudflared path manually.
+cftunnel.error.loginTimeout=Login timed out
+cftunnel.error.extractTimeout=Extracting cloudflared timed out
+cftunnel.error.extractFailed=Extracting cloudflared failed (exit %s)

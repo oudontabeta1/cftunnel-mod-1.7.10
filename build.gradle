@@ -1,0 +1,67 @@
+buildscript {
+    repositories {
+        mavenCentral()
+        maven { name = "forge"; url = "https://maven.minecraftforge.net/" }
+        maven { name = "sonatype"; url = "https://oss.sonatype.org/content/repositories/snapshots/" }
+    }
+    dependencies {
+        classpath 'net.minecraftforge.gradle:ForgeGradle:1.2-SNAPSHOT'
+    }
+}
+
+apply plugin: 'forge'
+
+version = "1.0.2"
+group = "dev.oudon.cftunnel"
+archivesBaseName = "cftunnel"
+
+minecraft {
+    version = "1.7.10-10.13.4.1614-1.7.10"
+    runDir = "run"
+    mappings = "stable_12"
+}
+
+compileJava {
+    sourceCompatibility = '1.8'
+    targetCompatibility = '1.8'
+    options.encoding = 'UTF-8'
+}
+
+processResources {
+    inputs.property "version", project.version
+
+    from(sourceSets.main.resources.srcDirs) {
+        include 'mcmod.info'
+        expand 'version': project.version
+    }
+
+    from(sourceSets.main.resources.srcDirs) {
+        exclude 'mcmod.info'
+    }
+}
+
+// ---------------------------------------------------------------------------
+// ForgeGradle 1.2 は廃止済みの Mojang 旧 URL (s3.amazonaws.com) を参照するため、
+// 現行の launcher.mojang.com に向け直す。
+// ---------------------------------------------------------------------------
+afterEvaluate {
+    tasks.downloadClient.url = new net.minecraftforge.gradle.delayed.DelayedString(
+            project,
+            'https://launcher.mojang.com/v1/objects/e80d9b3bf5085002218d4be59e668bac718abbc6/client.jar')
+
+    def serverTask = tasks.findByName('downloadServer')
+    if (serverTask != null) {
+        serverTask.url = new net.minecraftforge.gradle.delayed.DelayedString(
+                project,
+                'https://launcher.mojang.com/v1/objects/952438ac4e01b4d115c5fc38f891710c4941df29/server.jar')
+    }
+}
+
+task deobfJar(type: Jar, dependsOn: 'jar') {
+    from sourceSets.main.output
+    classifier = 'dev'
+}
+
+artifacts {
+    archives deobfJar
+}
